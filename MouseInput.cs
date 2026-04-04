@@ -2,44 +2,82 @@ using System.Runtime.InteropServices;
 
 namespace AutoClicker;
 
+internal enum ClickMouseButton
+{
+    Left,
+    Right,
+    Middle,
+}
+
 internal static class MouseInput
 {
     private const uint InputMouse = 0;
     private const uint MouseEventfLeftDown = 0x0002;
     private const uint MouseEventfLeftUp = 0x0004;
+    private const uint MouseEventfRightDown = 0x0008;
+    private const uint MouseEventfRightUp = 0x0010;
+    private const uint MouseEventfMiddleDown = 0x0020;
+    private const uint MouseEventfMiddleUp = 0x0040;
 
-    /// <summary>
-    /// Sends a left-button click at the current cursor position (non-absolute mode).
-    /// </summary>
-    internal static void SendLeftClick()
+    internal static void SendClick(ClickMouseButton button)
     {
-        var inputs = new INPUT[2];
-        inputs[0].type = InputMouse;
-        inputs[0].Union.mi = new MOUSEINPUT
-        {
-            dx = 0,
-            dy = 0,
-            mouseData = 0,
-            dwFlags = MouseEventfLeftDown,
-            time = 0,
-            dwExtraInfo = UIntPtr.Zero,
-        };
-        inputs[1].type = InputMouse;
-        inputs[1].Union.mi = new MOUSEINPUT
-        {
-            dx = 0,
-            dy = 0,
-            mouseData = 0,
-            dwFlags = MouseEventfLeftUp,
-            time = 0,
-            dwExtraInfo = UIntPtr.Zero,
-        };
+        SendButtonDown(button);
+        SendButtonUp(button);
+    }
 
-        SendInput(2, inputs, Marshal.SizeOf<INPUT>());
+    internal static void SendButtonDown(ClickMouseButton button)
+    {
+        SendInput(1, new[] { MakeMouseInput(FlagsForDown(button)) }, Marshal.SizeOf<INPUT>());
+    }
+
+    internal static void SendButtonUp(ClickMouseButton button)
+    {
+        SendInput(1, new[] { MakeMouseInput(FlagsForUp(button)) }, Marshal.SizeOf<INPUT>());
+    }
+
+    internal static void MoveCursorTo(int x, int y) => _ = SetCursorPos(x, y);
+
+    private static uint FlagsForDown(ClickMouseButton button) => button switch
+    {
+        ClickMouseButton.Left => MouseEventfLeftDown,
+        ClickMouseButton.Right => MouseEventfRightDown,
+        ClickMouseButton.Middle => MouseEventfMiddleDown,
+        _ => MouseEventfLeftDown,
+    };
+
+    private static uint FlagsForUp(ClickMouseButton button) => button switch
+    {
+        ClickMouseButton.Left => MouseEventfLeftUp,
+        ClickMouseButton.Right => MouseEventfRightUp,
+        ClickMouseButton.Middle => MouseEventfMiddleUp,
+        _ => MouseEventfLeftUp,
+    };
+
+    private static INPUT MakeMouseInput(uint dwFlags)
+    {
+        return new INPUT
+        {
+            type = InputMouse,
+            Union = new InputUnion
+            {
+                mi = new MOUSEINPUT
+                {
+                    dx = 0,
+                    dy = 0,
+                    mouseData = 0,
+                    dwFlags = dwFlags,
+                    time = 0,
+                    dwExtraInfo = UIntPtr.Zero,
+                },
+            },
+        };
     }
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetCursorPos(int x, int y);
 
     [StructLayout(LayoutKind.Sequential)]
     private struct MOUSEINPUT

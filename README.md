@@ -1,6 +1,6 @@
 # AutoClicker
 
-Small Windows desktop app: repeats the **left mouse button** at the **current cursor position** on a fixed interval. Use **Start** / **Stop** in the window or press **F6** anywhere to toggle (when registration succeeds).
+Windows desktop app that automates mouse buttons at the cursor (or a **captured screen position**), on a timer with optional **random jitter**, or in **hold** mode. Use **Start** / **Stop** or a global **F1–F12** hotkey (default **F6**). Settings are saved under `%LocalAppData%\AutoClicker\settings.json`.
 
 ## Requirements
 
@@ -31,13 +31,26 @@ dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=
 
 Output is under `bin\Release\net8.0-windows\win-x64\publish\`.
 
+## Features
+
+| Option | Description |
+|--------|-------------|
+| **Interval (ms)** | Base delay between clicks in **Click** mode (1–3,600,000). |
+| **Jitter max (+ms)** | Each interval adds random **0…jitter** milliseconds (0 = fixed interval). |
+| **Mouse button** | Left, right, or middle. |
+| **Mode: Click** | Repeated down/up at the interval (with jitter). |
+| **Mode: Hold** | Presses the button down on Start and releases on Stop (no timer). |
+| **Fixed position** | When enabled, moves the cursor to the captured point before each click or before hold. Use **Capture position** first. |
+| **Toggle hotkey** | Choose **F1–F12**; registers globally when possible. |
+| **Minimize to tray** | When checked, minimizing hides the window; use the tray icon (double-click or **Show**) to restore. |
+
 ## Usage
 
-1. Set **Interval (ms)** (1–3,600,000).
-2. Focus the target and position the cursor where clicks should go.
-3. Press **Start** or **F6** to begin; **Stop** or **F6** to end.
+1. Choose options (interval, jitter, button, mode, optional fixed position and hotkey).
+2. If **Fixed position** is on, click **Capture position** with the cursor where you want clicks.
+3. Press **Start** or the hotkey to begin; **Stop** or the hotkey to end.
 
-If **F6** cannot be registered (already used by another program), you will see a warning and can still use **Start** / **Stop**.
+If the hotkey cannot be registered, you will see a warning at startup and can still use **Start** / **Stop**.
 
 ## Disclaimer
 
