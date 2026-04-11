@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- **Fixed position capture** uses a **3-second countdown** so you can move the mouse off the **Capture** button to the real target before coordinates are sampled; **Cancel capture** and clearer prompts were added.
+
 ### Added
 
 - **Mouse button** choice: left, right, or middle (`SendInput`).

@@ -8,10 +8,13 @@ public partial class MainForm : Form
     private const int WM_HOTKEY = 0x0312;
     private const uint ModNorepeat = 0x4000;
     private const uint VkF1 = 0x70;
+    private const int CaptureCountdownSeconds = 3;
 
     private bool _hotkeyRegistered;
     private bool _holdRunning;
     private Point? _fixedPoint;
+    private bool _captureCountdownActive;
+    private int _captureSecondsRemaining;
 
     public MainForm()
     {
@@ -24,10 +27,16 @@ public partial class MainForm : Form
         trayIcon.ContextMenuStrip = trayMenu;
 
         clickTimer.Tick += ClickTimer_Tick;
+        captureCountdownTimer.Tick += CaptureCountdownTimer_Tick;
         modeClickRadio.CheckedChanged += (_, _) => UpdateUiState();
         modeHoldRadio.CheckedChanged += (_, _) => UpdateUiState();
         hotkeyCombo.SelectedIndexChanged += (_, _) => ReregisterHotKey();
-        fixedPositionCheckBox.CheckedChanged += (_, _) => UpdateUiState();
+        fixedPositionCheckBox.CheckedChanged += (_, _) =>
+        {
+            if (!fixedPositionCheckBox.Checked)
+                CancelCaptureCountdown();
+            UpdateUiState();
+        };
 
         ApplySettings(AppSettingsStore.Load());
     }
@@ -73,6 +82,7 @@ public partial class MainForm : Form
 
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
+        CancelCaptureCountdown();
         clickTimer.Stop();
         if (_holdRunning)
         {
@@ -145,7 +155,8 @@ public partial class MainForm : Form
     {
         if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == HotKeyId)
         {
-            ToggleRunning();
+            if (!_captureCountdownActive)
+                ToggleRunning();
             return;
         }
 
@@ -158,9 +169,49 @@ public partial class MainForm : Form
 
     private void setPositionButton_Click(object sender, EventArgs e)
     {
-        _fixedPoint = Cursor.Position;
-        RefreshPositionLabel();
+        if (_captureCountdownActive)
+        {
+            CancelCaptureCountdown();
+            return;
+        }
+
+        _captureCountdownActive = true;
+        _captureSecondsRemaining = CaptureCountdownSeconds;
+        positionLabel.Text = $"Move the mouse to the target… {_captureSecondsRemaining}";
+        setPositionButton.Text = "Cancel capture";
+        captureCountdownTimer.Start();
+        UpdateUiState();
     }
+
+    private void CaptureCountdownTimer_Tick(object? sender, EventArgs e)
+    {
+        _captureSecondsRemaining--;
+        if (_captureSecondsRemaining > 0)
+        {
+            positionLabel.Text = $"Move the mouse to the target… {_captureSecondsRemaining}";
+            return;
+        }
+
+        captureCountdownTimer.Stop();
+        _captureCountdownActive = false;
+        _fixedPoint = Cursor.Position;
+        ResetCaptureButtonText();
+        RefreshPositionLabel();
+        UpdateUiState();
+    }
+
+    private void CancelCaptureCountdown()
+    {
+        if (!_captureCountdownActive)
+            return;
+        captureCountdownTimer.Stop();
+        _captureCountdownActive = false;
+        ResetCaptureButtonText();
+        RefreshPositionLabel();
+        UpdateUiState();
+    }
+
+    private void ResetCaptureButtonText() => setPositionButton.Text = "Capture in 3s…";
 
     private void intervalNumericUpDown_ValueChanged(object sender, EventArgs e)
     {
@@ -211,11 +262,14 @@ public partial class MainForm : Form
 
     private void Start()
     {
+        if (_captureCountdownActive)
+            return;
+
         if (fixedPositionCheckBox.Checked && _fixedPoint is null)
         {
             MessageBox.Show(
                 this,
-                "Turn off fixed position, or click \"Capture position\" first.",
+                "Turn off fixed position, or use \"Capture in 3s…\" first (move the mouse to the spot before the countdown ends).",
                 "Fixed position",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
@@ -267,29 +321,30 @@ public partial class MainForm : Form
     {
         var running = clickTimer.Enabled || _holdRunning;
         var clickMode = modeClickRadio.Checked;
+        var capturing = _captureCountdownActive;
 
-        startButton.Enabled = !running;
+        startButton.Enabled = !running && !capturing;
         stopButton.Enabled = running;
         statusLabel.Text = running ? "Status: Running" : "Status: Stopped";
 
-        intervalNumericUpDown.Enabled = clickMode && !running;
+        intervalNumericUpDown.Enabled = clickMode && !running && !capturing;
         intervalLabel.Enabled = clickMode;
-        jitterNumericUpDown.Enabled = clickMode && !running;
+        jitterNumericUpDown.Enabled = clickMode && !running && !capturing;
         jitterLabel.Enabled = clickMode;
 
-        mouseButtonCombo.Enabled = !running;
-        mouseButtonLabel.Enabled = !running;
-        modeClickRadio.Enabled = !running;
-        modeHoldRadio.Enabled = !running;
-        modeLabel.Enabled = !running;
+        mouseButtonCombo.Enabled = !running && !capturing;
+        mouseButtonLabel.Enabled = !running && !capturing;
+        modeClickRadio.Enabled = !running && !capturing;
+        modeHoldRadio.Enabled = !running && !capturing;
+        modeLabel.Enabled = !running && !capturing;
 
-        fixedPositionCheckBox.Enabled = !running;
+        fixedPositionCheckBox.Enabled = !running && !capturing;
         setPositionButton.Enabled = !running && fixedPositionCheckBox.Checked;
         positionLabel.Enabled = true;
 
-        hotkeyCombo.Enabled = !running;
-        hotkeyPickLabel.Enabled = !running;
-        minimizeToTrayCheckBox.Enabled = !running;
+        hotkeyCombo.Enabled = !running && !capturing;
+        hotkeyPickLabel.Enabled = !running && !capturing;
+        minimizeToTrayCheckBox.Enabled = !running && !capturing;
     }
 
     [DllImport("user32.dll", SetLastError = true)]

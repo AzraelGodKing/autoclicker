@@ -5,6 +5,7 @@ partial class MainForm
     private System.ComponentModel.IContainer components = null!;
 
     private System.Windows.Forms.Timer clickTimer;
+    private System.Windows.Forms.Timer captureCountdownTimer;
     private Label intervalLabel;
     private NumericUpDown intervalNumericUpDown;
     private Label jitterLabel;
@@ -37,6 +38,8 @@ partial class MainForm
     {
         components = new System.ComponentModel.Container();
         clickTimer = new System.Windows.Forms.Timer(components);
+        captureCountdownTimer = new System.Windows.Forms.Timer(components);
+        captureCountdownTimer.Interval = 1000;
         intervalLabel = new Label();
         intervalNumericUpDown = new NumericUpDown();
         jitterLabel = new Label();
@@ -163,9 +166,9 @@ partial class MainForm
         //
         setPositionButton.Location = new Point(132, 140);
         setPositionButton.Name = "setPositionButton";
-        setPositionButton.Size = new Size(120, 26);
+        setPositionButton.Size = new Size(130, 26);
         setPositionButton.TabIndex = 10;
-        setPositionButton.Text = "Capture position";
+        setPositionButton.Text = "Capture in 3s…";
         setPositionButton.UseVisualStyleBackColor = true;
         setPositionButton.Click += setPositionButton_Click;
         //
